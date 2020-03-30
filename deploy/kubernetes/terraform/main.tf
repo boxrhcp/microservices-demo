@@ -60,13 +60,14 @@ resource "aws_instance" "ci-sockshop-k8s-master" {
   ami             = "${lookup(var.aws_amis, var.aws_region)}"
   key_name        = "${var.key_name}"
   security_groups = ["${aws_security_group.k8s-security-group.name}"]
-  tags {
+  tags = {
     Name = "ci-sockshop-k8s-master"
   }
 
   connection {
     user = "ubuntu"
     private_key = "${file("${var.private_key_path}")}"
+    host = self.public_ip
   }
 
   provisioner "file" {
@@ -91,13 +92,14 @@ resource "aws_instance" "ci-sockshop-k8s-node" {
   ami             = "${lookup(var.aws_amis, var.aws_region)}"
   key_name        = "${var.key_name}"
   security_groups = ["${aws_security_group.k8s-security-group.name}"]
-  tags {
+  tags = {
     Name = "ci-sockshop-k8s-node"
   }
 
   connection {
     user = "ubuntu"
     private_key = "${file("${var.private_key_path}")}"
+    host = self.public_ip
   }
 
   provisioner "remote-exec" {
@@ -113,10 +115,10 @@ resource "aws_instance" "ci-sockshop-k8s-node" {
 }
 
 resource "aws_elb" "ci-sockshop-k8s-elb" {
-  depends_on = [ "aws_instance.ci-sockshop-k8s-node" ]
+  depends_on = [ aws_instance.ci-sockshop-k8s-node ]
   name = "ci-sockshop-k8s-elb"
-  instances = ["${aws_instance.ci-sockshop-k8s-node.*.id}"]
-  availability_zones = ["${data.aws_availability_zones.available.names}"]
+  instances = "${aws_instance.ci-sockshop-k8s-node.*.id}"
+  availability_zones = "${data.aws_availability_zones.available.names}"
   security_groups = ["${aws_security_group.k8s-security-group.id}"] 
   listener {
     lb_port = 80
